@@ -2,7 +2,6 @@ package main
 
 import (
 	"os"
-	"time"
 
 	qdb "github.com/rqure/qdb/src"
 )
@@ -23,11 +22,11 @@ func main() {
 
 	dbWorker := qdb.NewDatabaseWorker(db)
 	leaderElectionWorker := qdb.NewLeaderElectionWorker(db)
-	clockWorker := NewClockWorker(db, 1*time.Second)
+	alertWorker := NewAlertWorker(db)
 	schemaValidator := qdb.NewSchemaValidator(db)
 
 	schemaValidator.AddEntity("Root", "SchemaUpdateTrigger")
-	schemaValidator.AddEntity("SystemClock", "CurrentTime")
+	schemaValidator.AddEntity("AlertController", "ApplicationName", "Description", "TTSAlert", "EmailAlert", "SendTrigger")
 
 	dbWorker.Signals.SchemaUpdated.Connect(qdb.Slot(schemaValidator.ValidationRequired))
 	dbWorker.Signals.Connected.Connect(qdb.Slot(schemaValidator.ValidationRequired))
@@ -38,16 +37,16 @@ func main() {
 	dbWorker.Signals.Connected.Connect(qdb.Slot(leaderElectionWorker.OnDatabaseConnected))
 	dbWorker.Signals.Disconnected.Connect(qdb.Slot(leaderElectionWorker.OnDatabaseDisconnected))
 
-	leaderElectionWorker.Signals.BecameLeader.Connect(qdb.Slot(clockWorker.OnBecameLeader))
-	leaderElectionWorker.Signals.LosingLeadership.Connect(qdb.Slot(clockWorker.OnLostLeadership))
+	leaderElectionWorker.Signals.BecameLeader.Connect(qdb.Slot(alertWorker.OnBecameLeader))
+	leaderElectionWorker.Signals.LosingLeadership.Connect(qdb.Slot(alertWorker.OnLostLeadership))
 
 	// Create a new application configuration
 	config := qdb.ApplicationConfig{
-		Name: "clock",
+		Name: "alert",
 		Workers: []qdb.IWorker{
 			dbWorker,
 			leaderElectionWorker,
-			clockWorker,
+			alertWorker,
 		},
 	}
 
