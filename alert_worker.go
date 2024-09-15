@@ -2,7 +2,6 @@ package main
 
 import (
 	qdb "github.com/rqure/qdb/src"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 type AlertWorker struct {
@@ -84,45 +83,23 @@ func (w *AlertWorker) ProcessNotification(notification *qdb.DatabaseNotification
 			Conditions: []qdb.FieldConditionEval{},
 		})
 
-		newStr := func(s string) *anypb.Any {
-			m := &qdb.String{Raw: s}
-
-			a, err := anypb.New(m)
-			if err != nil {
-				qdb.Error("[AlertWorker::ProcessNotification] Failed to create Any from string: %v", err)
-			}
-
-			return a
-		}
-
-		newInt := func(i int) *anypb.Any {
-			m := &qdb.Int{Raw: int64(i)}
-
-			a, err := anypb.New(m)
-			if err != nil {
-				qdb.Error("[AlertWorker::ProcessNotification] Failed to create Any from int: %v", err)
-			}
-
-			return a
-		}
-
 		for _, controller := range controllers {
 			// Needs to be written as an atomic bulk operation so notifications don't get mingled together
 			w.db.Write([]*qdb.DatabaseRequest{
 				{
 					Id:    controller.GetId(),
 					Field: "Subject",
-					Value: newStr("Alert from '" + applicationName + "' service"),
+					Value: qdb.NewStringValue("Alert from '" + applicationName + "' service"),
 				},
 				{
 					Id:    controller.GetId(),
 					Field: "Body",
-					Value: newStr(description),
+					Value: qdb.NewStringValue(description),
 				},
 				{
 					Id:    controller.GetId(),
 					Field: "SendTrigger",
-					Value: newInt(0),
+					Value: qdb.NewIntValue(0),
 				},
 			})
 		}
