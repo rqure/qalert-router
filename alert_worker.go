@@ -58,9 +58,9 @@ func (w *AlertWorker) ProcessNotification(notification *qdb.DatabaseNotification
 	qdb.Info("[AlertWorker::ProcessNotification] Received notification: %v", notification)
 
 	applicationName := qdb.ValueCast[*qdb.String](notification.Context[0].Value).Raw
-	description := qdb.ValueCast[*qdb.String](notification.Context[0].Value).Raw
-	ttsAlert := qdb.ValueCast[*qdb.Bool](notification.Context[1].Value).Raw
-	emailAlert := qdb.ValueCast[*qdb.Bool](notification.Context[2].Value).Raw
+	description := qdb.ValueCast[*qdb.String](notification.Context[1].Value).Raw
+	ttsAlert := qdb.ValueCast[*qdb.Bool](notification.Context[2].Value).Raw
+	emailAlert := qdb.ValueCast[*qdb.Bool](notification.Context[3].Value).Raw
 
 	if ttsAlert {
 		qdb.Info("[AlertWorker::ProcessNotification] Sending TTS alert: %v", description)
