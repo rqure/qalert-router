@@ -14,8 +14,8 @@ github.com/gorilla/websocket v1.5.1 h1:gmztn0JnHVt9JZquRuzLw3g4wouNVzKL15iLr/zn/
 github.com/gorilla/websocket v1.5.1/go.mod h1:x3kM2JMyaluk02fnUJpQuwD2dCS5NDG2ZHL0uE0tcaY=
 github.com/redis/go-redis/v9 v9.4.0 h1:Yzoz33UZw9I/mFhx4MNrB6Fk+XHO1VukNcCa1+lwyKk=
 github.com/redis/go-redis/v9 v9.4.0/go.mod h1:hdY0cQFCN4fnSYT6TkisLufl/4W5UIXyv0b/CLO2V2M=
-github.com/rqure/qdb v1.2.62 h1:C+zA+ILJzf4maicrYn0QlKMwleshH6Apc/xBx9lREF8=
-github.com/rqure/qdb v1.2.62/go.mod h1:G/frdO6RXYzffeVyKiPl8H1P4vo9C/UAB12LZxtJhos=
+github.com/rqure/qdb v1.2.63 h1:nB02e26xKTrbljtA+YbU0u3L+jiesniiXEgV0daw+CQ=
+github.com/rqure/qdb v1.2.63/go.mod h1:G/frdO6RXYzffeVyKiPl8H1P4vo9C/UAB12LZxtJhos=
 golang.org/x/net v0.17.0 h1:pVaXccu2ozPjCXewfr1S7xza/zcXTity9cCdXQYSjIM=
 golang.org/x/net v0.17.0/go.mod h1:NxSsAGuq816PNPmqtQdLE42eU2Fs7NoRIZrHJAlaCOE=
 golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543 h1:E7g+9GITq07hpfrRu66IVDexMakfv52eLZ2CXBWiKr4=
