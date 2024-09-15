@@ -89,7 +89,7 @@ func (w *AlertWorker) ProcessNotification(notification *qdb.DatabaseNotification
 				{
 					Id:    controller.GetId(),
 					Field: "Subject",
-					Value: qdb.NewStringValue("Alert from '" + applicationName + "' service"),
+					Value: qdb.NewStringValue("Alert from " + applicationName + " service"),
 				},
 				{
 					Id:    controller.GetId(),
