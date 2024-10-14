@@ -31,7 +31,7 @@ func main() {
 	dbWorker.Signals.SchemaUpdated.Connect(qdb.Slot(schemaValidator.ValidationRequired))
 	dbWorker.Signals.Connected.Connect(qdb.Slot(schemaValidator.ValidationRequired))
 	leaderElectionWorker.AddAvailabilityCriteria(func() bool {
-		return schemaValidator.IsValid()
+		return dbWorker.IsConnected() && schemaValidator.IsValid()
 	})
 
 	dbWorker.Signals.Connected.Connect(qdb.Slot(leaderElectionWorker.OnDatabaseConnected))
