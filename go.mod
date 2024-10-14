@@ -1,6 +1,6 @@
 module github.com/rqure/qclock
 
-go 1.21.6
+go 1.22
 
 require github.com/rqure/qdb v1.2.63
 
