@@ -1,91 +1,99 @@
 package main
 
 import (
+	"context"
+
 	qdb "github.com/rqure/qdb/src"
+	"github.com/rqure/qlib/pkg/app"
+	"github.com/rqure/qlib/pkg/data"
+	"github.com/rqure/qlib/pkg/data/notification"
+	"github.com/rqure/qlib/pkg/data/query"
+	"github.com/rqure/qlib/pkg/log"
 )
 
 type AlertWorker struct {
-	db                 qdb.IDatabase
+	store              data.Store
 	isLeader           bool
-	notificationTokens []qdb.INotificationToken
+	notificationTokens []data.NotificationToken
 }
 
-func NewAlertWorker(db qdb.IDatabase) *AlertWorker {
+func NewAlertWorker(store data.Store) *AlertWorker {
 	return &AlertWorker{
 		db:                 db,
 		isLeader:           false,
-		notificationTokens: []qdb.INotificationToken{},
+		notificationTokens: []data.NotificationToken{},
 	}
 }
 
-func (w *AlertWorker) OnBecameLeader() {
+func (w *AlertWorker) OnBecameLeader(context.Context) {
 	w.isLeader = true
 
-	w.notificationTokens = append(w.notificationTokens, w.db.Notify(&qdb.DatabaseNotificationConfig{
-		Type:          "AlertController",
-		Field:         "SendTrigger",
-		ContextFields: []string{"ApplicationName", "Description", "TTSAlert", "EmailAlert"},
-	}, qdb.NewNotificationCallback(w.ProcessNotification)))
+	w.notificationTokens = append(w.notificationTokens, w.store.Notify(
+ctx,
+notification.NewConfig().
+SetEntityType(        "AlertController").
+SetFieldName(        "SendTrigger"),
+	}, notification.NewCallback(w.ProcessNotification)))
 }
 
-func (w *AlertWorker) OnLostLeadership() {
+func (w *AlertWorker) OnLostLeadership(context.Context) {
 	w.isLeader = false
 
 	for _, token := range w.notificationTokens {
 		token.Unbind()
 	}
 
-	w.notificationTokens = []qdb.INotificationToken{}
+	w.notificationTokens = []data.NotificationToken{}
 }
 
-func (w *AlertWorker) Init() {
-
-}
-
-func (w *AlertWorker) Deinit() {
+func (w *AlertWorker) Init(context.Context, app.Handle) {
 
 }
 
-func (w *AlertWorker) DoWork() {
+func (w *AlertWorker) Deinit(context.Context) {
 
 }
 
-func (w *AlertWorker) ProcessNotification(notification *qdb.DatabaseNotification) {
+func (w *AlertWorker) DoWork(context.Context) {
+
+}
+
+func (w *AlertWorker) ProcessNotification(ctx context.Context, notification data.Notification) {
 	if !w.isLeader {
 		return
 	}
 
-	qdb.Info("[AlertWorker::ProcessNotification] Received notification: %v", notification)
+	log.Info("Received notification: %v", notification)
 
-	applicationName := qdb.ValueCast[*qdb.String](notification.Context[0].Value).Raw
-	description := qdb.ValueCast[*qdb.String](notification.Context[1].Value).Raw
-	ttsAlert := qdb.ValueCast[*qdb.Bool](notification.Context[2].Value).Raw
-	emailAlert := qdb.ValueCast[*qdb.Bool](notification.Context[3].Value).Raw
+	applicationName := notification.GetContext(0).GetValue().GetString()
+	description := notification.GetContext(1).GetValue().GetString()
+	ttsAlert := notification.GetContext(2).GetValue().GetBool()
+	emailAlert := notification.GetContext(3).GetValue().GetBool()
 
 	if ttsAlert {
-		qdb.Info("[AlertWorker::ProcessNotification] Sending TTS alert: %v", description)
+		log.Info("Sending TTS alert: %v", description)
 
-		controllers := qdb.NewEntityFinder(w.db).Find(qdb.SearchCriteria{
+		controllers := query.New(w.store).Find(qdb.SearchCriteria{
 			EntityType: "AudioController",
 			Conditions: []qdb.FieldConditionEval{},
 		})
 
 		for _, controller := range controllers {
-			controller.GetField("TextToSpeech").PushString(description)
+			controller.GetField("TextToSpeech").WriteString(ctx, description)
 		}
 	}
 
 	if emailAlert {
-		qdb.Info("[AlertWorker::ProcessNotification] Sending email alert: %v", description)
+		log.Info("Sending email alert: %v", description)
 
-		controllers := qdb.NewEntityFinder(w.db).Find(qdb.SearchCriteria{
+		controllers := query.New(w.store).Find(qdb.SearchCriteria{
 			EntityType: "SmtpController",
 			Conditions: []qdb.FieldConditionEval{},
 		})
 
 		for _, controller := range controllers {
 			// Needs to be written as an atomic bulk operation so notifications don't get mingled together
-			w.db.Write([]*qdb.DatabaseRequest{
+			w.store.Write([]*qdb.DatabaseRequest{
 				{
 					Id:    controller.GetId(),
 					Field: "Subject",

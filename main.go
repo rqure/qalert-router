@@ -4,55 +4,50 @@ import (
 	"os"
 
 	qdb "github.com/rqure/qdb/src"
+	"github.com/rqure/qlib/pkg/app"
+	"github.com/rqure/qlib/pkg/app/workers"
+	"github.com/rqure/qlib/pkg/data/store"
 )
 
 func getDatabaseAddress() string {
-	addr := os.Getenv("QDB_ADDR")
+	addr := os.Getenv("Q_ADDR")
 	if addr == "" {
-		addr = "redis:6379"
+		addr = "ws://webgateway:20000/ws"
 	}
 
 	return addr
 }
 
 func main() {
-	db := qdb.NewRedisDatabase(qdb.RedisDatabaseConfig{
+	db := store.NewWeb(store.WebConfig{
 		Address: getDatabaseAddress(),
 	})
 
-	dbWorker := qdb.NewDatabaseWorker(db)
-	leaderElectionWorker := qdb.NewLeaderElectionWorker(db)
+	storeWorker := workers.NewStore(db)
+	leadershipWorker := workers.NewLeadership(db)
 	alertWorker := NewAlertWorker(db)
-	schemaValidator := qdb.NewSchemaValidator(db)
+	schemaValidator := leadershipWorker.GetEntityFieldValidator()
 
-	schemaValidator.AddEntity("Root", "SchemaUpdateTrigger")
-	schemaValidator.AddEntity("AlertController", "ApplicationName", "Description", "TTSAlert", "EmailAlert", "SendTrigger")
+	schemaValidator.RegisterEntityFields("Root", "SchemaUpdateTrigger")
+	schemaValidator.RegisterEntityFields("AlertController", "ApplicationName", "Description", "TTSAlert", "EmailAlert", "SendTrigger")
 
-	dbWorker.Signals.SchemaUpdated.Connect(qdb.Slot(schemaValidator.ValidationRequired))
-	dbWorker.Signals.Connected.Connect(qdb.Slot(schemaValidator.ValidationRequired))
-	leaderElectionWorker.AddAvailabilityCriteria(func() bool {
-		return dbWorker.IsConnected() && schemaValidator.IsValid()
-	})
+	storeWorker.Connected.Connect(leadershipWorker.OnStoreConnected)
+	storeWorker.Disconnected.Connect(leadershipWorker.OnStoreDisconnected)
 
-	dbWorker.Signals.Connected.Connect(qdb.Slot(leaderElectionWorker.OnDatabaseConnected))
-	dbWorker.Signals.Disconnected.Connect(qdb.Slot(leaderElectionWorker.OnDatabaseDisconnected))
-
-	leaderElectionWorker.Signals.BecameLeader.Connect(qdb.Slot(alertWorker.OnBecameLeader))
-	leaderElectionWorker.Signals.LosingLeadership.Connect(qdb.Slot(alertWorker.OnLostLeadership))
+	leadershipWorker.BecameLeader().Connect(alertWorker.OnBecameLeader)
+	leadershipWorker.LosingLeadership().Connect(alertWorker.OnLostLeadership)
 
 	// Create a new application configuration
 	config := qdb.ApplicationConfig{
 		Name: "alert",
 		Workers: []qdb.IWorker{
-			dbWorker,
-			leaderElectionWorker,
+			storeWorker,
+			leadershipWorker,
 			alertWorker,
 		},
 	}
 
-	// Create a new application
-	app := qdb.NewApplication(config)
+	app := app.NewApplication(config)
 
-	// Execute the application
 	app.Execute()
 }
