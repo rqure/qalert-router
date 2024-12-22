@@ -4,7 +4,7 @@ go 1.22.7
 
 require (
 	github.com/rqure/qdb v1.2.87
-	github.com/rqure/qlib v0.0.29
+	github.com/rqure/qlib v0.0.30
 )
 
 require (
