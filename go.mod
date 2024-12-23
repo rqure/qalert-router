@@ -1,4 +1,4 @@
-module github.com/rqure/qclock
+module github.com/rqure/qalert
 
 go 1.22.7
 
