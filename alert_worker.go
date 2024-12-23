@@ -32,7 +32,14 @@ func (w *AlertWorker) OnBecameLeader(ctx context.Context) {
 		ctx,
 		notification.NewConfig().
 			SetEntityType("AlertController").
-			SetFieldName("SendTrigger"),
+			SetFieldName("SendTrigger").
+			SetContextFields(
+				"ApplicationName",
+				"Description",
+				"TTSAlert",
+				"EmailAlert",
+				"TTSLanguage",
+			),
 		notification.NewCallback(w.ProcessNotification)))
 }
 
@@ -69,17 +76,22 @@ func (w *AlertWorker) ProcessNotification(ctx context.Context, n data.Notificati
 	description := n.GetContext(1).GetValue().GetString()
 	ttsAlert := n.GetContext(2).GetValue().GetBool()
 	emailAlert := n.GetContext(3).GetValue().GetBool()
+	ttsLanguage := n.GetContext(4).GetValue().GetString()
 
 	if ttsAlert {
 		log.Info("Sending TTS alert: %v", description)
 
-		controllers := query.New(w.store).
+		multi := binding.NewMulti(w.store)
+		controllers := query.New(multi).
 			ForType("AudioController").
 			Execute(ctx)
 
 		for _, controller := range controllers {
+			controller.GetField("TTSLanguage").WriteString(ctx, ttsLanguage)
 			controller.GetField("TextToSpeech").WriteString(ctx, description)
 		}
+
+		multi.Commit(ctx)
 	}
 
 	if emailAlert {

@@ -28,7 +28,7 @@ func main() {
 	schemaValidator := leadershipWorker.GetEntityFieldValidator()
 
 	schemaValidator.RegisterEntityFields("Root", "SchemaUpdateTrigger")
-	schemaValidator.RegisterEntityFields("AlertController", "ApplicationName", "Description", "TTSAlert", "EmailAlert", "SendTrigger")
+	schemaValidator.RegisterEntityFields("AlertController", "ApplicationName", "Description", "TTSAlert", "EmailAlert", "SendTrigger", "TTSLanguage")
 
 	storeWorker.Connected.Connect(leadershipWorker.OnStoreConnected)
 	storeWorker.Disconnected.Connect(leadershipWorker.OnStoreDisconnected)
