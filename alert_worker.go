@@ -5,7 +5,6 @@ import (
 
 	"github.com/rqure/qlib/pkg/app"
 	"github.com/rqure/qlib/pkg/data"
-	"github.com/rqure/qlib/pkg/data/binding"
 	"github.com/rqure/qlib/pkg/data/notification"
 	"github.com/rqure/qlib/pkg/data/query"
 	"github.com/rqure/qlib/pkg/log"
@@ -81,34 +80,32 @@ func (w *AlertWorker) ProcessNotification(ctx context.Context, n data.Notificati
 	if ttsAlert {
 		log.Info("Sending TTS alert: %v", description)
 
-		multi := binding.NewMulti(w.store)
-		controllers := query.New(multi).
-			ForType("AudioController").
+		controllers := query.New(w.store).
+			From("AudioController").
 			Execute(ctx)
 
 		for _, controller := range controllers {
-			controller.GetField("TTSLanguage").WriteString(ctx, ttsLanguage)
-			controller.GetField("TextToSpeech").WriteString(ctx, description)
+			controller.DoMulti(ctx, func(controller data.EntityBinding) {
+				controller.GetField("TTSLanguage").WriteString(ctx, ttsLanguage)
+				controller.GetField("TextToSpeech").WriteString(ctx, description)
+			})
 		}
-
-		multi.Commit(ctx)
 	}
 
 	if emailAlert {
 		log.Info("Sending email alert: %v", description)
 
-		multi := binding.NewMulti(w.store)
-		controllers := query.New(multi).
-			ForType("SmtpController").
+		controllers := query.New(w.store).
+			From("SmtpController").
 			Execute(ctx)
 
 		for _, controller := range controllers {
 			// Needs to be written as an atomic bulk operation so notifications don't get mingled together
-			controller.GetField("Subject").WriteString(ctx, "Alert from "+applicationName+" service")
-			controller.GetField("Body").WriteString(ctx, description)
-			controller.GetField("SendTrigger").WriteInt(ctx)
+			controller.DoMulti(ctx, func(controller data.EntityBinding) {
+				controller.GetField("Subject").WriteString(ctx, "Alert from "+applicationName+" service")
+				controller.GetField("Body").WriteString(ctx, description)
+				controller.GetField("SendTrigger").WriteInt(ctx)
+			})
 		}
-
-		multi.Commit(ctx)
 	}
 }
